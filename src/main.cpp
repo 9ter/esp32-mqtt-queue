@@ -23,7 +23,7 @@ char mqtt_server[64];
 int mqtt_port;
 char mqtt_topic[64];
 char subscribe_topic[64];
-char deviceID[16] = "MC0004";
+char deviceID[16];
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -43,6 +43,10 @@ String inputBuffer;
 
 void saveConfig()
 {
+  Serial.println("\n🚀 Saving Config...");
+  Serial.print("deviceID = ");
+  Serial.println(deviceID);
+
   EEPROM.put(OFFSET_SSID, ssid);
   EEPROM.put(OFFSET_PASSWORD, password);
   EEPROM.put(OFFSET_MQTT_SERVER, mqtt_server);
@@ -50,8 +54,15 @@ void saveConfig()
   EEPROM.put(OFFSET_MQTT_TOPIC, mqtt_topic);
   EEPROM.put(OFFSET_SUBSCRIBE_TOPIC, subscribe_topic);
   EEPROM.put(OFFSET_DEVICE_ID, deviceID);
-  EEPROM.commit();
-  Serial.println("\n✅ Config saved to EEPROM");
+
+  if (EEPROM.commit())
+  {
+    Serial.println("✅ Config saved to EEPROM successfully");
+  }
+  else
+  {
+    Serial.println("❌ EEPROM commit failed");
+  }
 }
 
 void loadConfig()
@@ -64,14 +75,32 @@ void loadConfig()
   EEPROM.get(OFFSET_SUBSCRIBE_TOPIC, subscribe_topic);
   EEPROM.get(OFFSET_DEVICE_ID, deviceID);
 
-  bool invalid =
-      ssid[0] == '\0' || ssid[0] == 0xFF || strlen(ssid) >= sizeof(ssid) ||
-      password[0] == '\0' || password[0] == 0xFF || strlen(password) >= sizeof(password) ||
-      mqtt_server[0] == '\0' || mqtt_server[0] == 0xFF || strlen(mqtt_server) >= sizeof(mqtt_server) ||
-      mqtt_port <= 0 || mqtt_port > 65535 ||
-      mqtt_topic[0] == '\0' || mqtt_topic[0] == 0xFF || strlen(mqtt_topic) >= sizeof(mqtt_topic) ||
-      subscribe_topic[0] == '\0' || subscribe_topic[0] == 0xFF || strlen(subscribe_topic) >= sizeof(subscribe_topic) ||
-      deviceID[0] == '\0' || deviceID[0] == 0xFF || strlen(deviceID) >= sizeof(deviceID);
+  // Debug ดู raw deviceID
+  Serial.print("EEPROM deviceID raw: ");
+  for (int i = 0; i < sizeof(deviceID); i++)
+  {
+    Serial.print((uint8_t)deviceID[i], HEX);
+    Serial.print(" ");
+  }
+  Serial.println();
+
+  // ตรวจสอบความถูกต้อง
+  bool invalid = false;
+
+  if (ssid[0] == '\0' || ssid[0] == 0xFF || strlen(ssid) >= sizeof(ssid) - 1)
+    invalid = true;
+  else if (password[0] == 0xFF || strlen(password) >= sizeof(password) - 1)
+    invalid = true; // อนุญาต password ว่าง
+  else if (mqtt_server[0] == '\0' || mqtt_server[0] == 0xFF || strlen(mqtt_server) >= sizeof(mqtt_server) - 1)
+    invalid = true;
+  else if (mqtt_port <= 0 || mqtt_port > 65535)
+    invalid = true;
+  else if (mqtt_topic[0] == '\0' || mqtt_topic[0] == 0xFF || strlen(mqtt_topic) >= sizeof(mqtt_topic) - 1)
+    invalid = true;
+  else if (subscribe_topic[0] == '\0' || subscribe_topic[0] == 0xFF || strlen(subscribe_topic) >= sizeof(subscribe_topic) - 1)
+    invalid = true;
+  else if (deviceID[0] == '\0' || deviceID[0] == 0xFF || strlen(deviceID) >= sizeof(deviceID) - 1)
+    invalid = true;
 
   if (invalid)
   {
@@ -81,7 +110,7 @@ void loadConfig()
     strcpy(password, "");
     strcpy(mqtt_server, "192.168.0.100");
     mqtt_port = 1883;
-    strcpy(deviceID, "MC0004");
+    strcpy(deviceID, "MC0001");
     snprintf(mqtt_topic, sizeof(mqtt_topic), "%s/Queue/tel", deviceID);
     snprintf(subscribe_topic, sizeof(subscribe_topic), "%s/Queue/number", deviceID);
   }
@@ -232,6 +261,7 @@ void handleCommand(String cmd)
         snprintf(subscribe_topic, sizeof(subscribe_topic), "%s/%s", deviceID, subscribe_topic_path);
       }
     }
+    saveConfig();
 
     break;
 
@@ -274,9 +304,11 @@ void callback(char *topic, byte *payload, unsigned int length)
   delay(5000);
   lcd.clear();
   lcd.setCursor(0, 0);
-  lcd.print("Ready to queue");
+  lcd.print("Ready to Queue!!");
   lcd.setCursor(0, 1);
-  lcd.print(deviceID);
+  lcd.print("Current");
+  lcd.setCursor(8, 1);
+  lcd.print(message);
 
   status = 1;
 }
@@ -423,9 +455,10 @@ void setup()
   lcd.backlight();
   lcd.clear();
   lcd.setCursor(0, 0);
-  lcd.print("Ready to queue");
+  lcd.print("Ready to Queue!!");
   lcd.setCursor(0, 1);
   lcd.print(deviceID);
+  delay(2000);
 
   setup_wifi();
   client.setCallback(callback);
