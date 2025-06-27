@@ -373,7 +373,7 @@ void reconnect()
 
   while (!client.connected())
   {
-    if (millis() - mqttStartTime > 30000)
+   /*if (millis() - mqttStartTime > 30000)
     {
       Serial.println("\n❌ MQTT connection timeout. Please re-enter MQTT Server and Port.");
 
@@ -395,7 +395,7 @@ void reconnect()
       saveConfig();
       mqttStartTime = millis(); // รีเซ็ตเวลานับใหม่
       continue;                 // กลับไปพยายามเชื่อมต่อใหม่
-    }
+    }*/
 
     Serial.print("Connecting to MQTT...");
     client.setServer(mqtt_server, mqtt_port);
@@ -419,6 +419,7 @@ void reconnect()
       lcd.print("Ready to queue");
       lcd.setCursor(0, 1);
       lcd.print(deviceID);
+      break;
     }
     else
     {
@@ -427,13 +428,7 @@ void reconnect()
       lcd.clear();
       lcd.setCursor(0, 0);
       lcd.print("MQTT Failed!");
-      delay(1000);
-      lcd.setCursor(0, 1);
-      lcd.print("MQTT Timeout: ");
-      lcd.setCursor(13, 1);
-      lcd.print(secondsPassed);
-      lcd.print("s ");
-      secondsPassed++;
+  
     }
   }
 }
@@ -477,10 +472,10 @@ void loop()
     reconnect();
   client.loop();
 
-  if (client.connected())
+ /* if (client.connected())
   {
     resendUnsentMessages(); // ✅ หาก MQTT กลับมาให้ส่งใหม่
-  }
+  }*/
 
   bool buttonState = digitalRead(SW_PIN);
   if (lastButtonState == HIGH && buttonState == LOW && millis() - lastPressTime > 500 && status == 1)
