@@ -489,7 +489,8 @@ void loop()
 
     char buffer[64];
     sprintf(buffer, "%s", deviceID);
-    Serial.print("publish -- >");
+    Serial.print("publish --> ");
+    Serial.print(mqtt_topic);
     Serial.println(buffer);
 
     if (client.connected())
